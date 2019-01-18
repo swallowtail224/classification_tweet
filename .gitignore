@@ -1,0 +1,11 @@
+RNN_tweet/Datas
+RNN_tweet/Figs
+RNN_tweet/models
+RNN_tweet/.ipynb_checkpoints/
+RNN_tweet/logs/
+test/.ipynb_checkpoints/
+test/logs/
+temp/
+.ipynb_checkpoints/
+logs/
+.DS_Store
