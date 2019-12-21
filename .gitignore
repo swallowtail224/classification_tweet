@@ -10,3 +10,5 @@ temp/
 logs/
 .DS_Store
 test/Datas
+Pipfile
+Pipfile.lock
