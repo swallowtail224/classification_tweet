@@ -42,15 +42,18 @@ published_post.sum()
 tweet_data.head()
 
 #不要な文字の削除
-tweet_data["tweet"] = tweet_data["tweet"].str.replace('\n', ' ').str.replace('_nan', ' ')
+tweet_data["tweet"] = tweet_data["tweet"].str.replace('\n', ' ').str.replace('_nan', ' ').str.replace(r'[0-9]', ' ').str.replace(r'([^\s\w])+', ' ')
 
 tweet_data.head()
 
-tweet_data["tweet"] = tweet_data["tweet"].str.replace(r'[0-9]', ' ')
+#特定のデータ数のカウント
+test = ((tweet_data['screen_name'] == '川源ぶどう園(花巻市)') & (tweet_data['retweet'] == 1.0)) 
+print(test.sum())
 
-tweet_data.head()
+tweet_data.to_csv("Datas/all_data/all_tweet.csv",index=False, sep=",")
 
-data_s.to_csv("retweet_data.txt",index=False, sep=",")
+#postdateをdatetime形式に変換
+print(pd.to_datetime(tweet_data['postdate'], format = '%Y-%m-%d'))
 
 #テキストデータのみ取り出し、ファイルに書き出す
 text = data_s.drop(['tweetID', 'retweet', 'date_x'], axis=1)
@@ -71,8 +74,6 @@ print(len(lines))
 #text_data_test  = lines[9924:9929]
 #print(text_data_test)
 def clean_text(text_string):
-    text_string = re.sub(r'([^\s\w])+', '', text_string)
-    text_string = re.sub(r'[0-9]', '', text_string)
     text_string = " ".join(text_string.split())
     text_string = text_string.lower()
     return(text_string)
