@@ -3,6 +3,7 @@ RNN_tweet/Figs
 RNN_tweet/models
 RNN_tweet/.ipynb_checkpoints/
 RNN_tweet/logs/
+RNN_retry/Datas
 test/.ipynb_checkpoints/
 test/logs/
 temp/
