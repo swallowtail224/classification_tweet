@@ -50,7 +50,7 @@ print(images.shape)
 tweet_data.head()
 
 #不要な文字の削除
-tweet_data["tweet"] = tweet_data["tweet"].str.replace('\n', ' ').str.replace('_nan', ' ').str.replace(r'[0-9]', ' ').str.replace(r'([^\s\w])+', ' ')
+tweet_data["tweet"] = tweet_data["tweet"].str.replace('\n', ' ').str.replace('_nan', ' ').str.replace(r'[0-9]', ' ').str.replace(r'([^\s\w])+', ' ').str.replace(r'[０-９]', ' ')
 
 tweet_data.head()
 
@@ -66,9 +66,6 @@ print(all_data.isnull().sum())
 all_data.head(10)
 
 all_data.to_csv("Datas/all_data/all_data.csv",index=False, sep=",")
-
-#postdateをdatetime形式に変換
-print(pd.to_datetime(tweet_data['postdate'], format = '%Y-%m-%d'))
 
 #特定のデータ数のカウント
 test = ((tweet_data['screen_name'] == '川源ぶどう園(花巻市)') & (tweet_data['retweet'] == 1.0)) 
