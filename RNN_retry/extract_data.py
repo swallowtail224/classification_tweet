@@ -18,15 +18,11 @@ import re
 import urllib.request
 import unicodedata
 import pandas as pd
+import numpy as np
+import math
 
 
 # +
-#テキストのクリーニング
-def clean_text(text_string):
-    text_string = re.sub(r'[０-９]', '', text_string)
-    text_string = text_string.lower()
-    return(text_string)
-
 #slothlibのストップワードの取得
 def get_stopword():
     slothlib_path = 'http://svn.sourceforge.jp/svnroot/slothlib/CSharp/Version1/SlothLib/NLP/Filter/StopWord/word/Japanese.txt'
@@ -53,6 +49,12 @@ def except_stopwords(text):
             if i == j:
                 text.remove(j)
     return text
+
+#テキストのクリーニング
+def clean_text(text_string):
+    text_string = re.sub(r'[０-９]', '', text_string)
+    text_string = text_string.lower()
+    return(text_string)
 
 #MeCabによる形態素解析
 def extractter(text, flag):
@@ -100,6 +102,11 @@ def extractter(text, flag):
             break
     return keyword
 
+#テキストの結合
+def join_data(text):
+    texts = ' '.join(text)
+    return texts
+
 #画像URLをあるかないかの2値に変換
 def conversion_image(x):
     if x is not "0":
@@ -107,10 +114,19 @@ def conversion_image(x):
     else:
         return 0
 
-#テキストの結合
-def join_data(text):
-    texts = ' '.join(text)
-    return texts
+#日付データをsin, consへ変換
+def change_cos(x):
+    return np.cos(math.radians(90 - (x / 365)*360))
+
+def change_sin(x):
+    return np.sin(math.radians(90 - (x / 365)*360))
+
+def change_date(df,col):
+    df['cos_day']=df[col].dt.dayofyear
+    df['cos_day'] =df['cos_day'].apply(change_cos)
+    df['sin_day']=df[col].dt.dayofyear
+    df['sin_day'] =df['sin_day'].apply(change_sin)
+    return df
 
 
 # -
@@ -125,25 +141,29 @@ data_input.head()
 data_input['image'] = data_input['image_url'].apply(conversion_image)
 data_input.head()
 
-#postdateをdatetime形式に変換
+#postdateをdatetime形式に変換して、sin,cosに変換
 data_input['postdate'] = pd.to_datetime(data_input['postdate'], format = '%Y-%m-%d')
+data_input = change_date(data_input,col="postdate")
 data_input.head()
 
 #テキストのクリーング
-data_input['tweet'] = data_input['tweet'].apply(clean_text)
-data_input.head(20)
-
+data_input['tweet2'] = data_input['tweet'].apply(clean_text)
 #形態素解析
 x = 0
-data_input['tweet2'] = data_input['tweet2'].apply(lambda text:extractter(text, 0))
-data_input.head(20)
-
+data_input['tweet2'] = data_input['tweet'].apply(lambda text:extractter(text, 0))
 #ストップワードの除去
 data_input['tweet2'] = data_input['tweet2'].apply(except_stopwords)
-data_input.head(20)
-
 #リストの連結
 data_input['tweet2'] = data_input['tweet2'].apply(join_data)
 data_input.head(20)
 
+ch_data_input = data_input.loc[:, ['screen_name', 'user_id', 'tweet_id', 'tweet', 'tweet2', 'postdate', 'cos_day', 'sin_day', 'tag', 'image_url', 'image', 'retweet']]
+ch_data_input.head()
 
+ch_data_input.to_csv("Datas/all_data/extract_allData.csv",index=False, sep=",")
+
+#データの確認
+test = pd.read_csv(filepath_or_buffer="Datas/all_data/extract_allData.csv", encoding="utf_8", sep=",")
+print(len(test))
+
+test.info()
