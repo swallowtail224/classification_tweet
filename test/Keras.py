@@ -25,6 +25,9 @@ test = open("Datas/label.txt", "r", encoding="utf-8")
 label = test.readlines()
 test.close()
 print(len(label))
+# -
+print(lines[0:10])
+
 
 # +
 from keras.preprocessing.text import Tokenizer
@@ -33,9 +36,8 @@ import numpy as np
 from keras.utils.np_utils import to_categorical
 
 maxlen = 50
-training_samples = 7000 # training data 80 : validation data 20
-validation_samples = 1000
-test_samples = len(lines) - training_samples
+train = 0.7
+validation = 0.1
 max_words = 20000
 
 # word indexを作成
@@ -61,12 +63,10 @@ np.random.shuffle(indices)
 data = data[indices]
 labels = labels[indices]
 
-x_train = data[:training_samples]
-y_train = labels[:training_samples]
-x_val = data[training_samples: training_samples + validation_samples]
-y_val = labels[training_samples: training_samples + validation_samples]
-x_test = data[training_samples + validation_samples:]
-y_test = labels[training_samples + validation_samples:]
+
+indices = [int(len(labels) * n) for n in [train, train + validation]]
+x_train, x_validation, x_test = np.split(data, indices)
+y_train, y_validation, y_test = np.split(labels, indices)
 
 # +
 tdata = lines[-10:]
@@ -186,7 +186,7 @@ early_stopping = EarlyStopping(patience=0, verbose=1)
 history = model.fit(x_train, y_train,
                     epochs=100, 
                     batch_size=300,
-                    validation_data=(x_val, y_val),
+                    validation_data=(x_validation, y_validation),
                     callbacks=[early_stopping])
 
 loss_and_metrics = model.evaluate(x_test, y_test)
