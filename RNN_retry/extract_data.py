@@ -52,7 +52,6 @@ def except_stopwords(text):
 
 #テキストのクリーニング
 def clean_text(text_string):
-    text_string = re.sub(r'[０-９]', '', text_string)
     text_string = text_string.lower()
     return(text_string)
 
@@ -148,9 +147,9 @@ data_input.head()
 
 #テキストのクリーング
 data_input['tweet2'] = data_input['tweet'].apply(clean_text)
-#形態素解析
-x = 0
-data_input['tweet2'] = data_input['tweet'].apply(lambda text:extractter(text, 0))
+#形態素解析　名詞のみはx=0、それ以外も含むとx=1
+x = 1
+data_input['tweet2'] = data_input['tweet2'].apply(lambda text:extractter(text, x))
 #ストップワードの除去
 data_input['tweet2'] = data_input['tweet2'].apply(except_stopwords)
 #リストの連結
@@ -160,10 +159,14 @@ data_input.head(20)
 ch_data_input = data_input.loc[:, ['screen_name', 'user_id', 'tweet_id', 'tweet', 'tweet2', 'postdate', 'cos_day', 'sin_day', 'tag', 'image_url', 'image', 'retweet']]
 ch_data_input.head()
 
+#名詞のみのデータ保存
 ch_data_input.to_csv("Datas/all_data/extract_allData.csv",index=False, sep=",")
 
+#名詞以外も含むデータ保存
+ch_data_input.to_csv("Datas/all_data/A_extract_allData.csv",index=False, sep=",")
+
 #データの確認
-test = pd.read_csv(filepath_or_buffer="Datas/all_data/extract_allData.csv", encoding="utf_8", sep=",")
+test = pd.read_csv(filepath_or_buffer="Datas/all_data/A_extract_allData.csv", encoding="utf_8", sep=",")
 print(len(test))
 
 test.info()

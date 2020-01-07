@@ -150,12 +150,12 @@ x_train, x_validation, x_test = np.split(data, indices)
 y_train, y_validation, y_test = np.split(labels, indices)
 # -
 
+#学習データ内の掲載データ数のカウント
 count = 0
 for i in y_train:
     if i[1] == 1.0:
         count+=1
-
-count
+print(count)
 
 # +
 model = Sequential()
@@ -164,7 +164,7 @@ model.add(Dropout(0.5))
 model.add(LSTM(32, kernel_initializer=weight_variable))
 model.add(Dropout(0.5))
 model.add(Dense(2, activation='softmax'))
-opt = Adam(lr=1e-4, beta_1 = 0.9, beta_2 = 0.999)
+opt = Adam(lr=1e-3, beta_1 = 0.9, beta_2 = 0.999)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['acc', macro_precision, macro_recall, macro_f_measure])
 model.summary()
 #plot_model(model, show_shapes=True, show_layer_names=True, to_file='N_method1_LSTM1024_model.png')
@@ -174,7 +174,7 @@ early_stopping = EarlyStopping(patience=0, verbose=1)
 
 history = model.fit(x_train, y_train,
                     epochs=100, 
-                    batch_size = 300,
+                    batch_size = 200,
                     validation_data=(x_validation, y_validation),
                     class_weight={0:1., 1:4.73},
                     callbacks=[early_stopping])
