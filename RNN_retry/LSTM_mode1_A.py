@@ -24,7 +24,7 @@ from keras.utils.np_utils import to_categorical
 import keras.backend as K
 from functools import partial
 import pandas as pd
-from gensim.models import word2vec
+import numpy as np
 from keras.optimizers import Adam
 
 
@@ -105,8 +105,6 @@ def weight_variable(shape):
 
 # -
 
-#学習済みモデルのロード
-embeddings_model = word2vec.Word2Vec.load('Datas/Word2Vec_model/dC.model')
 #データの読み込み
 use_data = pd.read_csv(filepath_or_buffer="Datas/pickup_data.csv", encoding="utf_8", sep=",")
 print(len(use_data))
@@ -127,14 +125,7 @@ tokenizer.fit_on_texts(use_data_s['tweet2'])
 sequences = tokenizer.texts_to_sequences(use_data_s['tweet2'])
 
 word_index = tokenizer.word_index
-num_words = len(word_index)
-
 print("Found {} unique tokens.".format(len(word_index)))
-
-embedding_matrix = np.zeros((num_words+1, 50))
-for word, i in word_index.items():
-    if word in embeddings_model.wv.index2word:
-        embedding_matrix[i] = embeddings_model[word]
 
 data = pad_sequences(sequences, maxlen=maxlen)
 
@@ -148,11 +139,19 @@ print("Shape of label tensor:{}".format(labels.shape))
 indices = [int(len(labels) * n) for n in [train, train + validation]]
 x_train, x_val, x_test = np.split(data, indices)
 y_train, y_val, y_test = np.split(labels, indices)
+# -
+
+#学習データ内の掲載データ数のカウント
+count = 0
+for i in y_val:
+    if i[1] == 1.0:
+        count+=1
+print(count)
 
 # +
 p_input = Input(shape=(50, ), dtype='int32', name='input_postText')
 
-em = Embedding(input_dim=num_words+1, output_dim=50, input_length=50, weights=[embedding_matrix], trainable=False)(p_input)
+em = Embedding(input_dim=max_words, output_dim=50, input_length=50)(p_input)
 d_em = Dropout(0.5)(em)
 lstm_out = LSTM(32, kernel_initializer=weight_variable)(d_em)
 d_lstm_out = Dropout(0.5)(lstm_out)
@@ -164,22 +163,26 @@ model.compile(optimizer=optimizer, loss='categorical_crossentropy',  metrics=['a
 model.summary()
 #plot_model(model, show_shapes=True, show_layer_names=True, to_file='model_image/model1.png')
 
-early_stopping = EarlyStopping(patience=5, verbose=1)
+early_stopping = EarlyStopping(patience=1, verbose=1)
 # -
 
 history = model.fit(x_train, y_train,
-                    epochs=100, 
-                    batch_size=300,
-                    validation_data=(x_val, y_val),
-                    callbacks=[early_stopping])
+                    epochs=50, 
+                    batch_size=256,
+                    validation_data=(x_val, y_val))#,
+                    #callbacks=[early_stopping])
 
 loss_and_metrics = model.evaluate(x_test, y_test)
 print(loss_and_metrics)
 
 classes = model.predict(x_test)
-np.savetxt('Datas/result/model1_dC_predict.csv', classes, delimiter = ',')
+#np.savetxt('Datas/result/model1_dA_predict.csv', classes, delimiter = ',')
 
-model.save('Datas/models/model1_dC.h5')
+# +
+#model.save('Datas/models/model1_dA.h5')
+
+# +
+#シード値150 0.7700574856285929, 0.7703967081162668, 0.769495237278837, 0.7698049866774773
 
 # +
 # %matplotlib inline
@@ -195,7 +198,7 @@ plt.plot(epochs, acc, 'b--', label='Training acc')
 plt.plot(epochs, val_acc, 'b', label='Validation acc')
 plt.title('Training and validation accuracy')
 plt.legend()
-plt.savefig("Datas/Figs/C/test_and_val_acc.png")
+#plt.savefig("RNN_tweet/Figs/N_method1/N_acc.png")
 
 plt.figure()
 
@@ -203,15 +206,16 @@ plt.plot(epochs, loss, 'b--', label='Training loss')
 plt.plot(epochs, val_loss, 'b', label='Validation loss')
 plt.title('Training and validation loss')
 plt.legend()
-plt.savefig("Datas/Figs/C/test_and_val_loss.png")
+#plt.savefig("RNN_tweet/Figs/N_method1/N_loss.png")
 
 plt.figure()
-# -
 
+# +
 fig = plt.figure()
 ax_acc = fig.add_subplot(111)
-ax_acc.plot(epochs, val_acc, 'r', label='Validation acc')
+ax_acc.plot(epochs, val_acc, 'b--', label='Validation acc')
 plt.legend(bbox_to_anchor=(0, 1), loc='upper left', borderaxespad=0.5, fontsize=10)
+
 ax_loss = ax_acc.twinx()
 ax_loss.plot(epochs, val_loss, 'b', label='Validation loss')
 plt.legend(bbox_to_anchor=(0, 0.9), loc='upper left', borderaxespad=0.5, fontsize=10)
@@ -220,8 +224,9 @@ ax_acc.set_xlabel('epochs')
 ax_acc.set_ylabel('Validation acc')
 ax_loss.grid(True)
 ax_loss.set_ylabel('Validation loss')
-plt.savefig("Datas/Figs/C/val_acc_loss.png")
 plt.show()
 
+#plt.savefig("N_f_measure.png")
+# -
 
 

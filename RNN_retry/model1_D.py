@@ -106,9 +106,9 @@ def weight_variable(shape):
 # -
 
 #学習済みモデルのロード
-embeddings_model = word2vec.Word2Vec.load('Datas/Word2Vec_model/dC.model')
+embeddings_model = word2vec.Word2Vec.load('Datas/Word2Vec_model/dD.model')
 #データの読み込み
-use_data = pd.read_csv(filepath_or_buffer="Datas/pickup_data.csv", encoding="utf_8", sep=",")
+use_data = pd.read_csv(filepath_or_buffer="Datas/A_pickup_data.csv", encoding="utf_8", sep=",")
 print(len(use_data))
 use_data.info()
 
@@ -169,7 +169,7 @@ early_stopping = EarlyStopping(patience=5, verbose=1)
 
 history = model.fit(x_train, y_train,
                     epochs=100, 
-                    batch_size=300,
+                    batch_size=256,
                     validation_data=(x_val, y_val),
                     callbacks=[early_stopping])
 
@@ -195,7 +195,7 @@ plt.plot(epochs, acc, 'b--', label='Training acc')
 plt.plot(epochs, val_acc, 'b', label='Validation acc')
 plt.title('Training and validation accuracy')
 plt.legend()
-plt.savefig("Datas/Figs/C/test_and_val_acc.png")
+#plt.savefig("Datas/Figs/C/test_and_val_acc.png")
 
 plt.figure()
 
@@ -203,7 +203,7 @@ plt.plot(epochs, loss, 'b--', label='Training loss')
 plt.plot(epochs, val_loss, 'b', label='Validation loss')
 plt.title('Training and validation loss')
 plt.legend()
-plt.savefig("Datas/Figs/C/test_and_val_loss.png")
+#plt.savefig("Datas/Figs/C/test_and_val_loss.png")
 
 plt.figure()
 # -
@@ -220,7 +220,7 @@ ax_acc.set_xlabel('epochs')
 ax_acc.set_ylabel('Validation acc')
 ax_loss.grid(True)
 ax_loss.set_ylabel('Validation loss')
-plt.savefig("Datas/Figs/C/val_acc_loss.png")
+#plt.savefig("Datas/Figs/C/val_acc_loss.png")
 plt.show()
 
 
