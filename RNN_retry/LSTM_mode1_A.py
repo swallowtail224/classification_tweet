@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.3.0
+#       jupytext_version: 1.3.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -158,7 +158,7 @@ d_lstm_out = Dropout(0.5)(lstm_out)
 output = Dense(2, activation='softmax', name = 'output')(d_lstm_out)
 
 model = Model(inputs=p_input, outputs = output)
-optimizer = Adam(lr=1e-4)
+optimizer = Adam(lr=1e-3)
 model.compile(optimizer=optimizer, loss='categorical_crossentropy',  metrics=['acc', macro_precision, macro_recall, macro_f_measure])
 model.summary()
 #plot_model(model, show_shapes=True, show_layer_names=True, to_file='model_image/model1.png')
@@ -169,20 +169,19 @@ early_stopping = EarlyStopping(patience=1, verbose=1)
 history = model.fit(x_train, y_train,
                     epochs=50, 
                     batch_size=256,
-                    validation_data=(x_val, y_val))#,
-                    #callbacks=[early_stopping])
+                    validation_data=(x_val, y_val),
+                    callbacks=[early_stopping])
 
 loss_and_metrics = model.evaluate(x_test, y_test)
 print(loss_and_metrics)
 
 classes = model.predict(x_test)
-#np.savetxt('Datas/result/model1_dA_predict.csv', classes, delimiter = ',')
+np.savetxt('Datas/result/model1_dA_predict.csv', classes, delimiter = ',')
+
+model.save('Datas/models/model1_dA.h5')
 
 # +
-#model.save('Datas/models/model1_dA.h5')
-
-# +
-#シード値150 0.7700574856285929, 0.7703967081162668, 0.769495237278837, 0.7698049866774773
+#シード値150 0.760059985003749, 0.7588957815252522, 0.7601358017394675, 0.7594498660498278
 
 # +
 # %matplotlib inline
@@ -198,7 +197,7 @@ plt.plot(epochs, acc, 'b--', label='Training acc')
 plt.plot(epochs, val_acc, 'b', label='Validation acc')
 plt.title('Training and validation accuracy')
 plt.legend()
-#plt.savefig("RNN_tweet/Figs/N_method1/N_acc.png")
+plt.savefig("Datas/Figs/A/test_and_val_acc.png")
 
 plt.figure()
 
@@ -206,7 +205,7 @@ plt.plot(epochs, loss, 'b--', label='Training loss')
 plt.plot(epochs, val_loss, 'b', label='Validation loss')
 plt.title('Training and validation loss')
 plt.legend()
-#plt.savefig("RNN_tweet/Figs/N_method1/N_loss.png")
+plt.savefig("Datas/Figs/A/test_and_val_loss.png")
 
 plt.figure()
 
@@ -224,9 +223,14 @@ ax_acc.set_xlabel('epochs')
 ax_acc.set_ylabel('Validation acc')
 ax_loss.grid(True)
 ax_loss.set_ylabel('Validation loss')
+plt.savefig("Datas/Figs/A/val_acc_loss.png")
 plt.show()
-
-#plt.savefig("N_f_measure.png")
 # -
+test_data = use_data_s[15998:19999]
+
+
+test_data.to_csv("Datas/test_data_A.csv",index=False, sep=",")
+
+
 
 
