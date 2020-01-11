@@ -26,6 +26,7 @@ from functools import partial
 import pandas as pd
 import numpy as np
 from keras.optimizers import Adam
+from keras.layers.normalization import BatchNormalization
 
 
 # +
@@ -155,7 +156,8 @@ em = Embedding(input_dim=max_words, output_dim=50, input_length=50)(p_input)
 d_em = Dropout(0.5)(em)
 lstm_out = LSTM(32, kernel_initializer=weight_variable)(d_em)
 d_lstm_out = Dropout(0.5)(lstm_out)
-output = Dense(2, activation='softmax', name = 'output')(d_lstm_out)
+b_out = BatchNormalization()(d_lstm_out)
+output = Dense(2, activation='sigmoid', name = 'output')(b_out)
 
 model = Model(inputs=p_input, outputs = output)
 optimizer = Adam(lr=1e-3)
@@ -231,6 +233,6 @@ test_data = use_data_s[15998:19999]
 
 test_data.to_csv("Datas/test_data_A.csv",index=False, sep=",")
 
-
+use_data_s.to_csv("Datas/data_A.csv",index=False, sep=",")
 
 
