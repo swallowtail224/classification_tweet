@@ -6,27 +6,27 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.3.2
+#       jupytext_version: 1.3.1
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
 #     name: python3
 # ---
 
-from keras.layers import Input, Dense, Embedding, LSTM, Dropout, concatenate
-from keras.models import Model
-from keras.callbacks import EarlyStopping
-from keras.utils import plot_model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-import numpy as np
-from keras.utils.np_utils import to_categorical
-import keras.backend as K
-from functools import partial
-import pandas as pd
-import numpy as np
+from keras.models import Sequential
+from keras.layers import Flatten, Dense, Embedding, LSTM
+from keras.callbacks import EarlyStopping, TensorBoard
+from keras.layers.core import Dropout
 from keras.optimizers import Adam
-from keras.layers.normalization import BatchNormalization
+from keras.utils.np_utils import to_categorical
+from keras.utils import plot_model
+import keras.backend as K
+import numpy as np
+import pandas as pd
+from functools import partial
+import matplotlib.pyplot as plt
 
 
 # +
@@ -107,18 +107,25 @@ def weight_variable(shape):
 # -
 
 #データの読み込み
-use_data = pd.read_csv(filepath_or_buffer="Datas/pickup_data.csv", encoding="utf_8", sep=",")
-print(len(use_data))
-use_data.info()
+best_data = pd.read_csv(filepath_or_buffer="Datas/best_data.csv", encoding="utf_8", sep=",")
+best_data.info()
+
+#NaNデータのカウント
+print(best_data.isnull().sum())
+#NaNのデータを削除
+use_data = best_data.dropna(how='any')
+#掲載したツイート数のカウント
+published_post = use_data['retweet'] == 1
+published_post.sum()
 
 # +
 maxlen = 50
 train = 0.7
 validation = 0.1
-max_words = 25000
+max_words = 35000
 
 #データをランダムにシャッフル
-use_data_s = use_data.sample(frac=1, random_state=150)
+use_data_s = use_data.sample(frac=1, random_state=1)
 
 # word indexを作成
 tokenizer = Tokenizer(num_words=max_words)
@@ -138,103 +145,40 @@ print("Shape of data tensor:{}".format(data.shape))
 print("Shape of label tensor:{}".format(labels.shape))
 
 indices = [int(len(labels) * n) for n in [train, train + validation]]
-x_train, x_val, x_test = np.split(data, indices)
-y_train, y_val, y_test = np.split(labels, indices)
+x_train, x_validation, x_test = np.split(data, indices)
+y_train, y_validation, y_test = np.split(labels, indices)
 # -
 
 #学習データ内の掲載データ数のカウント
 count = 0
-for i in y_val:
+for i in y_train:
     if i[1] == 1.0:
         count+=1
 print(count)
 
 # +
-p_input = Input(shape=(50, ), dtype='int32', name='input_postText')
-
-em = Embedding(input_dim=max_words, output_dim=50, input_length=50)(p_input)
-d_em = Dropout(0.5)(em)
-lstm_out = LSTM(32, kernel_initializer=weight_variable)(d_em)
-d_lstm_out = Dropout(0.5)(lstm_out)
-b_out = BatchNormalization()(d_lstm_out)
-output = Dense(2, activation='sigmoid', name = 'output')(b_out)
-
-model = Model(inputs=p_input, outputs = output)
-optimizer = Adam(lr=1e-3)
-model.compile(optimizer=optimizer, loss='categorical_crossentropy',  metrics=['acc', macro_precision, macro_recall, macro_f_measure])
+model = Sequential()
+model.add(Embedding(max_words, 50, input_length=maxlen))
+model.add(Dropout(0.5))
+model.add(LSTM(32, kernel_initializer=weight_variable))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
+opt = Adam(lr=1e-3, beta_1 = 0.9, beta_2 = 0.999)
+model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['acc', macro_precision, macro_recall, macro_f_measure])
 model.summary()
-#plot_model(model, show_shapes=True, show_layer_names=True, to_file='model_image/model1.png')
+#plot_model(model, show_shapes=True, show_layer_names=True, to_file='N_method1_LSTM1024_model.png')
 
-early_stopping = EarlyStopping(patience=1, verbose=1)
+early_stopping = EarlyStopping(patience=0, verbose=1)
 # -
 
 history = model.fit(x_train, y_train,
-                    epochs=50, 
-                    batch_size=256,
-                    validation_data=(x_val, y_val),
+                    epochs=100, 
+                    batch_size = 256,
+                    validation_data=(x_validation, y_validation),
+                    class_weight={0:1., 1:4.18},
                     callbacks=[early_stopping])
 
 loss_and_metrics = model.evaluate(x_test, y_test)
 print(loss_and_metrics)
-
-classes = model.predict(x_test)
-np.savetxt('Datas/result/model1_dA_predict.csv', classes, delimiter = ',')
-
-model.save('Datas/models/model1_dA.h5')
-
-# +
-#シード値150 0.760059985003749, 0.7588957815252522, 0.7601358017394675, 0.7594498660498278
-
-# +
-# %matplotlib inline
-import matplotlib.pyplot as plt
-
-acc = history.history['acc']
-val_acc = history.history['val_acc']
-loss = history.history['loss']
-val_loss = history.history['val_loss']
-epochs = range(1, len(acc) + 1)
-
-plt.plot(epochs, acc, 'b--', label='Training acc')
-plt.plot(epochs, val_acc, 'b', label='Validation acc')
-plt.title('Training and validation accuracy')
-plt.legend()
-plt.savefig("Datas/Figs/A/test_and_val_acc.png")
-
-plt.figure()
-
-plt.plot(epochs, loss, 'b--', label='Training loss')
-plt.plot(epochs, val_loss, 'b', label='Validation loss')
-plt.title('Training and validation loss')
-plt.legend()
-plt.savefig("Datas/Figs/A/test_and_val_loss.png")
-
-plt.figure()
-
-# +
-fig = plt.figure()
-ax_acc = fig.add_subplot(111)
-ax_acc.plot(epochs, val_acc, 'b--', label='Validation acc')
-plt.legend(bbox_to_anchor=(0, 1), loc='upper left', borderaxespad=0.5, fontsize=10)
-
-ax_loss = ax_acc.twinx()
-ax_loss.plot(epochs, val_loss, 'b', label='Validation loss')
-plt.legend(bbox_to_anchor=(0, 0.9), loc='upper left', borderaxespad=0.5, fontsize=10)
-plt.title('Validation acc and Validation loss')
-ax_acc.set_xlabel('epochs')
-ax_acc.set_ylabel('Validation acc')
-ax_loss.grid(True)
-ax_loss.set_ylabel('Validation loss')
-plt.savefig("Datas/Figs/A/val_acc_loss.png")
-plt.show()
-# -
-test_data = use_data_s[15998:19999]
-
-
-test_data.to_csv("Datas/test_data_A.csv",index=False, sep=",")
-
-use_data_s.to_csv("Datas/data_A.csv",index=False, sep=",")
-
-# $(\theta = \theta – \eta \cdot \nabla_\theta J( \theta))$
 
 

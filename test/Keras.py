@@ -13,20 +13,20 @@
 #     name: python3
 # ---
 
-from keras.layers import Input, Dense, Embedding, LSTM, Dropout, concatenate
-from keras.models import Model
-from keras.callbacks import EarlyStopping
-from keras.utils import plot_model
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import numpy as np
 from keras.utils.np_utils import to_categorical
 import keras.backend as K
 from functools import partial
-import pandas as pd
-import numpy as np
+from keras.models import Sequential
+from keras.layers import Flatten, Dense, Embedding
+from keras.layers import LSTM
+from keras.callbacks import EarlyStopping, TensorBoard
+from keras.layers.core import Dropout
 from keras.optimizers import Adam
-from keras.layers.normalization import BatchNormalization
+from keras.utils import plot_model
+import pandas as pd
 
 
 # +
@@ -110,7 +110,6 @@ def weight_variable(shape):
 use_data = pd.read_csv(filepath_or_buffer="Datas/pickup_data.csv", encoding="utf_8", sep=",")
 print(len(use_data))
 use_data.info()
-
 # +
 maxlen = 50
 train = 0.7
@@ -140,66 +139,97 @@ print("Shape of label tensor:{}".format(labels.shape))
 indices = [int(len(labels) * n) for n in [train, train + validation]]
 x_train, x_val, x_test = np.split(data, indices)
 y_train, y_val, y_test = np.split(labels, indices)
-# -
-
-#学習データ内の掲載データ数のカウント
-count = 0
-for i in y_val:
-    if i[1] == 1.0:
-        count+=1
-print(count)
 
 # +
-p_input = Input(shape=(50, ), dtype='int32', name='input_postText')
-
-em = Embedding(input_dim=max_words, output_dim=50, input_length=50)(p_input)
-d_em = Dropout(0.5)(em)
-lstm_out = LSTM(32, kernel_initializer=weight_variable)(d_em)
-d_lstm_out = Dropout(0.5)(lstm_out)
-b_out = BatchNormalization()(d_lstm_out)
-output = Dense(2, activation='sigmoid', name = 'output')(b_out)
-
-model = Model(inputs=p_input, outputs = output)
-optimizer = Adam(lr=1e-3)
-model.compile(optimizer=optimizer, loss='categorical_crossentropy',  metrics=['acc', macro_precision, macro_recall, macro_f_measure])
+model = Sequential()
+model.add(Embedding(20282, 50, input_length=maxlen))
+model.add(Dropout(0.5))
+model.add(LSTM(32, kernel_initializer=weight_variable))
+model.add(Dropout(0.5))
+model.add(Dense(2, activation='softmax'))
+#opt = Adam(lr=1e-4, beta_1 = 0.9, beta_2 = 0.999)
+model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['acc', macro_precision, macro_recall, macro_f_measure])
 model.summary()
-#plot_model(model, show_shapes=True, show_layer_names=True, to_file='model_image/model1.png')
+#plot_model(model, show_shapes=True, show_layer_names=True, to_file='N_method1_LSTM1024_model.png')
 
-early_stopping = EarlyStopping(patience=1, verbose=1)
+early_stopping = EarlyStopping(patience=0, verbose=1)
 # -
 
 history = model.fit(x_train, y_train,
-                    epochs=50, 
-                    batch_size=256,
+                    epochs=100, 
+                    batch_size=300,
                     validation_data=(x_val, y_val),
                     callbacks=[early_stopping])
 
 loss_and_metrics = model.evaluate(x_test, y_test)
 print(loss_and_metrics)
 
-classes = model.predict(x_test)
-np.savetxt('Datas/result/model1_dA_predict.csv', classes, delimiter = ',')
+classes = model.predict_classes(x_test, batch_size=10)
+#print(test_labels == classes)
+print(classes)
+print(y_test)
 
-model.save('Datas/models/model1_dA.h5')
+y_test2 = y_test.reshape(-1)
+result = np.zeros(y_test2.shape, int)
+for idx, data in enumerate(classes):
+    result[idx] = int(np.argmax(data))
+
+print('ターゲット')
+print(y_test2)
+print('ディープラーニングによる予測')
+print(classes)
+
+label = use_data_s['retweet'][15998:19999]
+
+test = label.values
+
+test
 
 # +
-#シード値150 0.760059985003749, 0.7588957815252522, 0.7601358017394675, 0.7594498660498278
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
+
+print(confusion_matrix(test, classes))
+print(accuracy_score(test, classes))
+
+# +
+# データ数をtotalに格納
+total = len(classes)
+# ターゲット（正解）と予測が一致した数をsuccessに格納
+success = sum(classes==y_test2)
+
+# 正解率をパーセント表示
+print('正解率')
+print(100.0*success/total)
+# -
+
+print(tdata[0])
+
+model.save('N_method1_model_LSTM1024.h5')
 
 # +
 # %matplotlib inline
+
 import matplotlib.pyplot as plt
 
 acc = history.history['acc']
 val_acc = history.history['val_acc']
 loss = history.history['loss']
 val_loss = history.history['val_loss']
+precision = history.history['macro_precision']
+val_precision = history.history['val_macro_precision']
+recall = history.history['macro_recall']
+val_recall = history.history['val_macro_recall']
+f_measure = history.history['macro_f_measure']
+val_f_measure = history.history['val_macro_f_measure']
+
 epochs = range(1, len(acc) + 1)
 
 plt.plot(epochs, acc, 'b--', label='Training acc')
 plt.plot(epochs, val_acc, 'b', label='Validation acc')
 plt.title('Training and validation accuracy')
 plt.legend()
-plt.savefig("Datas/Figs/A/test_and_val_acc.png")
+#plt.savefig("RNN_tweet/Figs/N_method1/N_acc.png")
 
 plt.figure()
 
@@ -207,12 +237,34 @@ plt.plot(epochs, loss, 'b--', label='Training loss')
 plt.plot(epochs, val_loss, 'b', label='Validation loss')
 plt.title('Training and validation loss')
 plt.legend()
-plt.savefig("Datas/Figs/A/test_and_val_loss.png")
+#plt.savefig("RNN_tweet/Figs/N_method1/N_loss.png")
 
 plt.figure()
 
-# +
+plt.plot(epochs, precision, 'b--', label='Training precision')
+plt.plot(epochs, val_precision, 'b', label='Validation presicion')
+plt.title('Training and validation precision')
+plt.legend()
+#plt.savefig("RNN_tweet/Figs/N_method1/N_precision.png")
+
+plt.figure()
+
+plt.plot(epochs, recall, 'b--', label='Training recall')
+plt.plot(epochs, val_recall, 'b', label='Validation recall')
+plt.title('Training and validation recall')
+plt.legend()
+#plt.savefig("RNN_tweet/Figs/N_method1/N_recall.png")
+
+plt.figure()
+
+plt.plot(epochs, f_measure, 'b--', label='Training f_measure')
+plt.plot(epochs, val_f_measure, 'b', label='Validation f_measure')
+plt.title('Training and validation f_measure')
+plt.legend()
+#plt.savefig("RNN_tweet/Figs/N_method1/N_f_measure.png")
+
 fig = plt.figure()
+
 ax_acc = fig.add_subplot(111)
 ax_acc.plot(epochs, val_acc, 'b--', label='Validation acc')
 plt.legend(bbox_to_anchor=(0, 1), loc='upper left', borderaxespad=0.5, fontsize=10)
@@ -225,16 +277,36 @@ ax_acc.set_xlabel('epochs')
 ax_acc.set_ylabel('Validation acc')
 ax_loss.grid(True)
 ax_loss.set_ylabel('Validation loss')
-plt.savefig("Datas/Figs/A/val_acc_loss.png")
+
+#plt.savefig("RNN_tweet/Figs/N_method1/acc_loss.png")
+plt.show()
+
+
+# +
+plt.plot(epochs, f_measure, 'b--', label='Training f_measure')
+plt.plot(epochs, val_f_measure, 'b', label='Validation f_measure')
+plt.title('Training and validation f_measure')
+plt.legend()
+
+plt.savefig("N_f_measure.png")
+plt.show()
+
+# +
+fig = plt.figure()
+ax_acc = fig.add_subplot(111)
+ax_acc.plot(epochs, val_acc, 'b--', label='Training acc')
+plt.legend(bbox_to_anchor=(0, 1), loc='upper left', borderaxespad=0.5, fontsize=10)
+
+ax_loss = ax_acc.twinx()
+ax_loss.plot(epochs, val_loss, 'b', label='Training loss')
+plt.legend(bbox_to_anchor=(0, 0.9), loc='upper left', borderaxespad=0.5, fontsize=10)
+plt.title('Training acc and Training loss')
+ax_acc.set_xlabel('epochs')
+ax_acc.set_ylabel('Training acc')
+ax_loss.grid(True)
+ax_loss.set_ylabel('Training loss')
+
 plt.show()
 # -
-test_data = use_data_s[15998:19999]
-
-
-test_data.to_csv("Datas/test_data_A.csv",index=False, sep=",")
-
-use_data_s.to_csv("Datas/data_A.csv",index=False, sep=",")
-
-# $(\theta = \theta – \eta \cdot \nabla_\theta J( \theta))$
 
 
